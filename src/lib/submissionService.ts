@@ -7,6 +7,7 @@ import {
   appendOnboardingRowToGoogleSheet,
   type GoogleSheetsAppendResult,
 } from "@/lib/googleSheets";
+import { submitToAppsScript, type AppsScriptSubmitResult } from "@/lib/appsScript";
 import type { OnboardingAnswers } from "@/lib/validation";
 
 export interface OnboardingSubmissionPayload {
@@ -38,6 +39,7 @@ export interface PreparedSubmission {
   googleSheetRow: Record<string, unknown>;
   allAnswersJson: string;
   googleSheets: GoogleSheetsAppendResult;
+  appsScript: AppsScriptSubmitResult;
 }
 
 export const googleSheetColumns = [
@@ -211,10 +213,20 @@ export async function submitOnboardingForm(
 ): Promise<PreparedSubmission> {
   const flattenedAnswers = flattenFormAnswers(payload);
   const googleSheetRow = prepareGoogleSheetRow(payload);
-  const googleSheets = await appendOnboardingRowToGoogleSheet(
-    googleSheetRow,
-    googleSheetColumns,
-  );
+  const appsScript = await submitToAppsScript({
+    ...googleSheetRow,
+    row: googleSheetRow,
+    payload,
+  });
+  const googleSheets = appsScript.enabled
+    ? {
+        enabled: false,
+        message: "Google Sheets service-account append skipped because Apps Script webhook is configured.",
+      }
+    : await appendOnboardingRowToGoogleSheet(
+        googleSheetRow,
+        googleSheetColumns,
+      );
 
   const prepared = {
     timestamp: String(googleSheetRow.timestamp),
@@ -230,9 +242,17 @@ export async function submitOnboardingForm(
     googleSheetRow,
     allAnswersJson: JSON.stringify(payload.rawJson),
     googleSheets,
+    appsScript,
   };
 
-  if (googleSheets.enabled) {
+  if (appsScript.enabled && appsScript.ok) {
+    console.info("[AmitSells onboarding submission sent to Apps Script]", {
+      status: appsScript.status,
+    });
+  } else if (appsScript.enabled) {
+    console.warn("[AmitSells Apps Script submission failed]", appsScript);
+    console.info("[AmitSells prepared onboarding submission]", prepared);
+  } else if (googleSheets.enabled) {
     console.info("[AmitSells onboarding submission saved]", googleSheets);
   } else {
     console.warn("[AmitSells Google Sheets fallback]", googleSheets.message);

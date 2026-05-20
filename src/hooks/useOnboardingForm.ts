@@ -19,6 +19,8 @@ import { AUTOSAVE_KEY, useAutosaveForm, type AutosaveSnapshot } from "./useAutos
 
 export type OnboardingScreen = "welcome" | "form" | "review" | "success";
 
+const systemDefaultAnswerIds = new Set(["billing_country"]);
+
 export function useOnboardingForm() {
   const form = useForm<OnboardingAnswers>({
     resolver: zodResolver(onboardingValidationSchema),
@@ -304,9 +306,10 @@ export function useOnboardingForm() {
           answers,
         );
         const requiredQuestions = sectionQuestions.filter((question) => question.required);
-        const anyAnswered = sectionQuestions.some((question) =>
-          isAnswered(answers[question.id]),
-        );
+        const anyAnswered = sectionQuestions.some((question) => {
+          if (systemDefaultAnswerIds.has(question.id)) return false;
+          return isAnswered(answers[question.id]);
+        });
         const requiredComplete = requiredQuestions.every((question) =>
           isAnswered(answers[question.id]),
         );

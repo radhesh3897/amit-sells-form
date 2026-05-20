@@ -28,9 +28,10 @@ GOOGLE_SHEETS_CLIENT_EMAIL=
 GOOGLE_SHEETS_PRIVATE_KEY=
 GOOGLE_SHEETS_SPREADSHEET_ID=
 GOOGLE_SHEETS_SHEET_NAME="Onboarding Responses"
+GOOGLE_APPS_SCRIPT_WEBHOOK_URL=
 ```
 
-Use a Google Cloud service account for writes. A plain browser API key is not enough for private sheet submissions.
+For the simplest setup, use `GOOGLE_APPS_SCRIPT_WEBHOOK_URL`. The app will send submissions to that Apps Script endpoint from the server. If no Apps Script URL is set, it can fall back to service-account Google Sheets credentials.
 
 ## Submission Architecture
 
@@ -40,7 +41,7 @@ The form posts to:
 POST /api/submit-onboarding
 ```
 
-The route receives the payload, adds the timestamp and category context, flattens important fields, and appends a row to Google Sheets from the server. If Google Sheets credentials are missing, the route logs the prepared submission on the server and still returns success for development.
+The route receives the payload, adds the timestamp and category context, flattens important fields, and sends it to the configured Apps Script webhook from the server. If no Apps Script URL is configured, it can append directly to Google Sheets using service-account credentials. If neither is configured, the route logs the prepared submission on the server and still returns success for development.
 
 Submission logic lives in:
 
@@ -48,7 +49,7 @@ Submission logic lives in:
 src/lib/submissionService.ts
 ```
 
-Google Sheets logic lives in `src/lib/googleSheets.ts`; form flattening and row preparation live in `src/lib/submissionService.ts`.
+Apps Script submission logic lives in `src/lib/appsScript.ts`. Direct Google Sheets logic lives in `src/lib/googleSheets.ts`; form flattening and row preparation live in `src/lib/submissionService.ts`.
 
 ## Editing Questions
 
@@ -77,6 +78,14 @@ public/logo.png
 If the file is missing, the UI automatically shows an `AS` placeholder while keeping the code ready for the real logo.
 
 ## Google Sheets Setup
+
+### Apps Script Webhook
+
+1. Deploy your Apps Script as a Web App.
+2. Put the Web App URL into `GOOGLE_APPS_SCRIPT_WEBHOOK_URL`.
+3. Add the same env var in Vercel Project Settings.
+
+### Service Account Fallback
 
 1. Create a Google Cloud service account.
 2. Enable the Google Sheets API.
