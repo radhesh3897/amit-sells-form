@@ -96,6 +96,51 @@ export function useOnboardingForm() {
 
   useEffect(() => {
     const fieldsToClear: string[] = [];
+    const businessType = answers.business_type;
+
+    if (businessType !== "Sole Proprietorship" && isAnswered(answers.pan_number)) {
+      fieldsToClear.push("pan_number");
+    }
+
+    if (businessType !== "Partnership Firm" && isAnswered(answers.firm_pan_number)) {
+      fieldsToClear.push("firm_pan_number");
+    }
+
+    if (businessType !== "LLP") {
+      if (isAnswered(answers.llpin)) fieldsToClear.push("llpin");
+      if (isAnswered(answers.llp_pan_number)) fieldsToClear.push("llp_pan_number");
+    }
+
+    if (
+      businessType !== "Private Limited" &&
+      businessType !== "OPC"
+    ) {
+      if (isAnswered(answers.cin)) fieldsToClear.push("cin");
+      if (isAnswered(answers.company_pan_number)) {
+        fieldsToClear.push("company_pan_number");
+      }
+    }
+
+    if (isAnswered(answers.certificate_of_incorporation_link)) {
+      fieldsToClear.push("certificate_of_incorporation_link");
+    }
+
+    if (
+      ![
+        "Sole Proprietorship",
+        "Partnership Firm",
+        "LLP",
+        "Private Limited",
+        "OPC",
+      ].includes(typeof businessType === "string" ? businessType : "") &&
+      isAnswered(answers.has_gst)
+    ) {
+      fieldsToClear.push("has_gst");
+    }
+
+    if (answers.has_gst !== "Yes" && isAnswered(answers.gstin)) {
+      fieldsToClear.push("gstin");
+    }
 
     if (answers.business_time_type !== "Part-time" && isAnswered(answers.part_time_income_source)) {
       fieldsToClear.push("part_time_income_source");
@@ -108,8 +153,11 @@ export function useOnboardingForm() {
       fieldsToClear.push("website_or_landing_page_url");
     }
 
-    if (answers.has_instagram_linkedin_profiles !== "Yes") {
+    if (answers.has_instagram_profile !== "Yes") {
       if (isAnswered(answers.instagram_profile)) fieldsToClear.push("instagram_profile");
+    }
+
+    if (answers.has_linkedin_profile !== "Yes") {
       if (isAnswered(answers.linkedin_profile)) fieldsToClear.push("linkedin_profile");
     }
 
@@ -139,6 +187,49 @@ export function useOnboardingForm() {
       fieldsToClear.push("other_business_category");
     }
 
+    if (
+      answers.worked_with_closers_or_agencies_before !== "Yes" &&
+      isAnswered(answers.previous_closer_or_agency_experience)
+    ) {
+      fieldsToClear.push("previous_closer_or_agency_experience");
+    }
+
+    if (isAnswered(answers.worked_with_closers_before)) {
+      fieldsToClear.push("worked_with_closers_before");
+    }
+
+    if (isAnswered(answers.previous_closer_experience)) {
+      fieldsToClear.push("previous_closer_experience");
+    }
+
+    const paymentMethods = Array.isArray(answers.payment_methods)
+      ? answers.payment_methods
+      : [];
+    const clearUnlessSelected = (method: string, fieldIds: string[]) => {
+      if (paymentMethods.includes(method)) return;
+      fieldIds.forEach((fieldId) => {
+        if (isAnswered(answers[fieldId])) fieldsToClear.push(fieldId);
+      });
+    };
+
+    clearUnlessSelected("Direct bank transfer", [
+      "account_holder_name",
+      "bank_name",
+      "bank_account_number",
+      "ifsc_code",
+      "bank_branch_name",
+    ]);
+    clearUnlessSelected("UPI", ["upi_id"]);
+    clearUnlessSelected("Razorpay", ["razorpay_payment_link"]);
+    clearUnlessSelected("Cashfree", ["cashfree_payment_link"]);
+    clearUnlessSelected("Instamojo", ["instamojo_payment_link"]);
+    clearUnlessSelected("Stripe", ["stripe_payment_link"]);
+    clearUnlessSelected("Other", ["other_payment_method", "other_payment_details"]);
+
+    ["payment_gateway_name", "payment_link", "checkout_links"].forEach((fieldId) => {
+      if (isAnswered(answers[fieldId])) fieldsToClear.push(fieldId);
+    });
+
     fieldsToClear.forEach((fieldId) => {
       form.setValue(fieldId, "", {
         shouldDirty: true,
@@ -147,17 +238,49 @@ export function useOnboardingForm() {
       });
     });
   }, [
+    answers,
+    answers.business_type,
     answers.business_time_type,
     answers.b2b_category,
     answers.b2c_category,
-    answers.has_instagram_linkedin_profiles,
+    answers.certificate_of_incorporation_link,
+    answers.cin,
+    answers.company_pan_number,
+    answers.firm_pan_number,
+    answers.gstin,
+    answers.has_gst,
+    answers.has_instagram_profile,
+    answers.has_linkedin_profile,
     answers.has_website_or_landing_page,
     answers.instagram_profile,
     answers.linkedin_profile,
+    answers.llpin,
+    answers.llp_pan_number,
     answers.other_b2b_category,
     answers.other_b2c_category,
     answers.other_business_category,
+    answers.pan_number,
     answers.part_time_income_source,
+    answers.payment_methods,
+    answers.payment_gateway_name,
+    answers.payment_link,
+    answers.previous_closer_experience,
+    answers.previous_closer_or_agency_experience,
+    answers.worked_with_closers_before,
+    answers.worked_with_closers_or_agencies_before,
+    answers.account_holder_name,
+    answers.bank_account_number,
+    answers.bank_branch_name,
+    answers.bank_name,
+    answers.cashfree_payment_link,
+    answers.checkout_links,
+    answers.ifsc_code,
+    answers.instamojo_payment_link,
+    answers.other_payment_details,
+    answers.other_payment_method,
+    answers.razorpay_payment_link,
+    answers.stripe_payment_link,
+    answers.upi_id,
     answers.website_or_landing_page_url,
     form,
     primaryType,

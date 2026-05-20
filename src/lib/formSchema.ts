@@ -35,7 +35,9 @@ export interface FormQuestion {
   options?: string[];
   validation?: ValidationKind;
   longAnswer?: boolean;
+  hideWhenEmpty?: boolean;
   googleSheetColumn?: string;
+  groupLabel?: string;
 }
 
 export interface FormSection {
@@ -89,8 +91,22 @@ export const sections: FormSection[] = [
     kind: "common",
   },
   {
+    id: "buyer_psychology",
+    title: "Buyer Psychology",
+    description:
+      "High-ticket sales is not about explaining features. It is about understanding who the buyer is, what they fear, what they desire, what they doubt, and what makes them take action.",
+    kind: "common",
+  },
+  {
+    id: "offer_strength",
+    title: "Offer Strength",
+    description:
+      "A closer can scale a strong offer, but cannot save a weak or unclear offer. So we need to understand how clear, valuable, and sellable your offer is.",
+    kind: "common",
+  },
+  {
     id: "revenue_reality",
-    title: "Current Revenue Reality",
+    title: "Current Sales System",
     description:
       "Before we talk about closing more clients, we need to understand where your revenue stands today and what is stopping you from reaching the next level.",
     kind: "common",
@@ -103,29 +119,15 @@ export const sections: FormSection[] = [
     kind: "common",
   },
   {
-    id: "offer_strength",
-    title: "Offer Strength",
-    description:
-      "A closer can scale a strong offer, but cannot save a weak or unclear offer. So we need to understand how clear, valuable, and sellable your offer is.",
-    kind: "common",
-  },
-  {
-    id: "buyer_psychology",
-    title: "Buyer Psychology",
-    description:
-      "High-ticket sales is not about explaining features. It is about understanding fear, desire, doubt, urgency, and trust.",
-    kind: "common",
-  },
-  {
     id: "proof_assets",
-    title: "Sales Assets & Proof",
+    title: "Social Assets & Proof",
     description:
       "The stronger your proof and sales assets are, the faster AmitSells can understand your offer, handle objections, and close with confidence.",
     kind: "common",
   },
   {
     id: "sales_system",
-    title: "Current Sales System",
+    title: "Lead Follow-up & Onboarding System",
     description:
       "A closer performs best when the pipeline is clean. If leads, follow-ups, CRM, and onboarding are messy, revenue leaks even after good calls.",
     kind: "common",
@@ -304,9 +306,48 @@ export const questions: FormQuestion[] = [
   text("business_profile", "pan_number", "PAN Number", {
     required: true,
     placeholder: "Enter PAN number",
+    visibleWhenAny: [{ fieldId: "business_type", value: "Sole Proprietorship" }],
+  }),
+  text("business_profile", "firm_pan_number", "Firm PAN Number", {
+    required: true,
+    placeholder: "Enter firm PAN number",
+    visibleWhenAny: [{ fieldId: "business_type", value: "Partnership Firm" }],
+  }),
+  text("business_profile", "llpin", "LLPIN", {
+    required: true,
+    placeholder: "Enter LLPIN",
+    visibleWhenAny: [{ fieldId: "business_type", value: "LLP" }],
+  }),
+  text("business_profile", "llp_pan_number", "LLP PAN Number", {
+    required: true,
+    placeholder: "Enter LLP PAN number",
+    visibleWhenAny: [{ fieldId: "business_type", value: "LLP" }],
+  }),
+  text("business_profile", "cin", "CIN", {
+    required: true,
+    placeholder: "Enter CIN",
+    visibleWhenAny: [
+      { fieldId: "business_type", value: "Private Limited" },
+      { fieldId: "business_type", value: "OPC" },
+    ],
+  }),
+  text("business_profile", "company_pan_number", "Company PAN Number", {
+    required: true,
+    placeholder: "Enter company PAN number",
+    visibleWhenAny: [
+      { fieldId: "business_type", value: "Private Limited" },
+      { fieldId: "business_type", value: "OPC" },
+    ],
   }),
   radio("business_profile", "has_gst", "Do you have GST registration?", yesNoOptions, {
     required: true,
+    visibleWhenAny: [
+      { fieldId: "business_type", value: "Sole Proprietorship" },
+      { fieldId: "business_type", value: "Partnership Firm" },
+      { fieldId: "business_type", value: "LLP" },
+      { fieldId: "business_type", value: "Private Limited" },
+      { fieldId: "business_type", value: "OPC" },
+    ],
   }),
   text("business_profile", "gstin", "GSTIN", {
     required: true,
@@ -378,20 +419,27 @@ export const questions: FormQuestion[] = [
   }),
   radio(
     "online_presence",
-    "has_instagram_linkedin_profiles",
-    "Do you have Instagram and LinkedIn profiles for this business?",
+    "has_instagram_profile",
+    "Do you have an Instagram profile for this business?",
     yesNoOptions,
     { required: true },
   ),
   text("online_presence", "instagram_profile", "Instagram Profile", {
     required: true,
     placeholder: "Paste Instagram profile link or handle",
-    visibleWhenAny: [{ fieldId: "has_instagram_linkedin_profiles", value: "Yes" }],
+    visibleWhenAny: [{ fieldId: "has_instagram_profile", value: "Yes" }],
   }),
+  radio(
+    "online_presence",
+    "has_linkedin_profile",
+    "Do you have a LinkedIn profile for this business?",
+    yesNoOptions,
+    { required: true },
+  ),
   text("online_presence", "linkedin_profile", "LinkedIn Profile", {
     required: true,
     placeholder: "Paste LinkedIn profile link or handle",
-    visibleWhenAny: [{ fieldId: "has_instagram_linkedin_profiles", value: "Yes" }],
+    visibleWhenAny: [{ fieldId: "has_linkedin_profile", value: "Yes" }],
   }),
   radio("online_presence", "primary_type", "Who do you primarily sell to?", ["B2C", "B2B"], {
     reviewLabel: "Primary Type",
@@ -645,6 +693,19 @@ export const questions: FormQuestion[] = [
   ),
   radio(
     "pipeline_diagnosis",
+    "appointment_setting_owner",
+    "Do you have an appointment setter, or was your closer setting the appointment too?",
+    [
+      "We have a separate appointment setter",
+      "The closer was also setting appointments",
+      "I was setting appointments myself",
+      "We do not have a structured appointment-setting process yet",
+      "Not sure",
+    ],
+    { reviewLabel: "Appointment setting owner", required: true },
+  ),
+  radio(
+    "pipeline_diagnosis",
     "current_closing_rate",
     "What is your current closing rate?",
     ["Below 5%", "5-10%", "10-20%", "20-30%", "30%+", "Not tracking"],
@@ -672,60 +733,160 @@ export const questions: FormQuestion[] = [
     { required: true },
   ),
 
-  textarea("offer_strength", "exact_offer", "What exactly do you sell?", { required: true }),
+  text("buyer_psychology", "ideal_buyer_age_range", "Age Range", {
+    groupLabel: "Who is your ideal buyer?",
+    reviewLabel: "Buyer age range",
+    required: true,
+    placeholder: "Example: 25-40",
+  }),
+  text("buyer_psychology", "ideal_buyer_demographic", "Demographic", {
+    groupLabel: "Who is your ideal buyer?",
+    reviewLabel: "Buyer demographic",
+    required: true,
+    placeholder: "Example: working women, agency founders, salaried professionals",
+  }),
+  text("buyer_psychology", "ideal_buyer_psychographic", "Psychographic", {
+    groupLabel: "Who is your ideal buyer?",
+    reviewLabel: "Buyer psychographic",
+    required: true,
+    placeholder: "Example: ambitious but confused, wants growth, fears failure",
+  }),
+  text("buyer_psychology", "ideal_buyer_income_range", "Income Range / Paying Capacity", {
+    groupLabel: "Who is your ideal buyer?",
+    reviewLabel: "Buyer income range / paying capacity",
+    required: true,
+    placeholder: "Example: Rs. 50,000+/month income or can invest Rs. 1L+",
+  }),
+  text("buyer_psychology", "ideal_buyer_profession", "Profession", {
+    groupLabel: "Who is your ideal buyer?",
+    reviewLabel: "Buyer profession",
+    required: true,
+    placeholder: "Example: coach, trader, agency owner, working professional",
+  }),
+  text("buyer_psychology", "ideal_buyer_locations", "Targeted Cities / Countries", {
+    groupLabel: "Who is your ideal buyer?",
+    reviewLabel: "Targeted cities / countries",
+    required: true,
+    placeholder: "Example: India, UAE, Tier 1 cities, Mumbai, Delhi, Bangalore",
+  }),
+  textarea(
+    "buyer_psychology",
+    "ideal_buyer_reason",
+    "Why have you chosen the above as your ideal buyer? Why not someone else?",
+    { reviewLabel: "Reason for choosing this buyer", required: true },
+  ),
+  textarea(
+    "buyer_psychology",
+    "buyer_biggest_struggles",
+    "What are their biggest struggles right now?",
+    { reviewLabel: "Buyer struggles", required: true },
+  ),
+  textarea(
+    "buyer_psychology",
+    "promised_transformation",
+    "What transformation are you promising to your ideal buyer?",
+    { reviewLabel: "Promised transformation", required: true },
+  ),
+  text(
+    "buyer_psychology",
+    "transformation_timeline",
+    "How much time do you need to deliver your promised transformation?",
+    {
+      reviewLabel: "Transformation timeline",
+      required: true,
+      placeholder: "Example: 30 days, 90 days, 6 months",
+    },
+  ),
+  textarea(
+    "buyer_psychology",
+    "buyer_problem_phrases",
+    "What phrases do they commonly use to describe their problem?",
+    { reviewLabel: "Common problem phrases", required: true },
+  ),
+  textarea(
+    "buyer_psychology",
+    "buyer_biggest_fears",
+    "What are their biggest fears before buying?",
+    { reviewLabel: "Biggest fears", required: true },
+  ),
+  textarea(
+    "buyer_psychology",
+    "buyer_secretly_wanted_results",
+    "What results do they secretly want?",
+    { reviewLabel: "Secretly wanted results", required: true },
+  ),
+  textarea(
+    "buyer_psychology",
+    "common_buyer_objections",
+    "What objections do they commonly give?",
+    { reviewLabel: "Common objections", required: true },
+  ),
+  textarea(
+    "buyer_psychology",
+    "buyer_questions_before_buying",
+    "What questions do they ask before buying?",
+    { reviewLabel: "Questions before buying", required: true },
+  ),
+  textarea(
+    "buyer_psychology",
+    "what_makes_buyer_say_yes",
+    "What usually makes them say yes?",
+    { reviewLabel: "What makes them say yes", required: true },
+  ),
+
+  textarea("offer_strength", "exact_offer", "What exactly do you sell?", {
+    reviewLabel: "Exact offer",
+    required: true,
+  }),
+  textarea("offer_strength", "problem_solved", "What specific problem does your offer solve?", {
+    reviewLabel: "Problem solved",
+    required: true,
+  }),
+  textarea("offer_strength", "offer_messaging", "What is the messaging of your offer?", {
+    reviewLabel: "Offer messaging",
+    required: true,
+    placeholder:
+      "Example: what promise, positioning, hook, or core message do you use to sell this offer?",
+  }),
+  textarea("offer_strength", "offer_deliverables", "What are your deliverables?", {
+    reviewLabel: "Deliverables",
+    required: true,
+    placeholder:
+      "Example: live calls, recorded modules, templates, audits, reports, implementation support, etc.",
+  }),
+  text("offer_strength", "delivery_mode", "What is your delivery mode?", {
+    reviewLabel: "Delivery mode",
+    required: true,
+    placeholder:
+      "Example: 1:1 calls, group coaching, Zoom, recorded modules, WhatsApp support, DFY service, hybrid, etc.",
+  }),
   textarea(
     "offer_strength",
-    "client_transformation",
-    "What transformation or outcome does your client get after buying?",
-    { required: true },
+    "delivery_support",
+    "What support do you provide during delivery?",
+    {
+      reviewLabel: "Delivery support",
+      required: true,
+      placeholder:
+        "Example: WhatsApp support, weekly calls, account manager, feedback, implementation reviews, follow-ups, etc.",
+    },
   ),
-  textarea("offer_strength", "problem_solved", "What specific problem does your offer solve?", {
-    required: true,
-  }),
-  textarea("offer_strength", "offer_inclusions", "What is included inside your offer?", {
-    required: true,
-  }),
   textarea(
     "offer_strength",
     "why_choose_you",
     "Why should someone choose you over competitors or free content?",
-    { required: true },
+    { reviewLabel: "Why choose you", required: true },
   ),
   textarea("offer_strength", "bad_fit_client", "What type of client is not a good fit?", {
+    reviewLabel: "Bad-fit client",
     required: true,
   }),
   textarea(
     "offer_strength",
     "claims_never_to_make",
     "What promises or claims should never be made during sales calls?",
+    { reviewLabel: "Claims never to make" },
   ),
-
-  textarea("buyer_psychology", "ideal_buyer", "Who is your ideal buyer?", { required: true }),
-  textarea("buyer_psychology", "buyer_struggles", "What are their biggest struggles right now?", {
-    required: true,
-  }),
-  textarea(
-    "buyer_psychology",
-    "buyer_problem_phrases",
-    "What phrases do they commonly use to describe their problem?",
-    { required: true },
-  ),
-  textarea("buyer_psychology", "buyer_fears", "What are their biggest fears before buying?", {
-    required: true,
-  }),
-  textarea(
-    "buyer_psychology",
-    "buyer_desired_result",
-    "What result do they secretly want the most?",
-    { required: true },
-  ),
-  textarea("buyer_psychology", "common_objections", "What objections do they commonly give?", {
-    required: true,
-  }),
-  textarea("buyer_psychology", "buyer_questions", "What questions do they ask before buying?", {
-    required: true,
-  }),
-  textarea("buyer_psychology", "what_makes_them_say_yes", "What usually makes them say yes?"),
 
   radio("proof_assets", "has_testimonials", "Do you have testimonials or case studies?", yesNoOptions, {
     required: true,
@@ -819,16 +980,22 @@ export const questions: FormQuestion[] = [
     "What does the onboarding process look like after payment?",
     { required: true },
   ),
-  radio("sales_system", "worked_with_closers_before", "Have you worked with closers before?", yesNoOptions, {
-    required: true,
-  }),
+  radio(
+    "sales_system",
+    "worked_with_closers_or_agencies_before",
+    "Have you worked with closers/agencies before?",
+    yesNoOptions,
+    { reviewLabel: "Worked with closers/agencies before", required: true },
+  ),
   textarea(
     "sales_system",
-    "previous_closer_experience",
+    "previous_closer_or_agency_experience",
     "If yes, what worked and what did not work?",
     {
+      reviewLabel: "Previous closer/agency experience",
       required: true,
-      visibleWhenAny: [{ fieldId: "worked_with_closers_before", value: "Yes" }],
+      hideWhenEmpty: true,
+      visibleWhenAny: [{ fieldId: "worked_with_closers_or_agencies_before", value: "Yes" }],
     },
   ),
 
@@ -853,22 +1020,72 @@ export const questions: FormQuestion[] = [
     ["Yes", "No", "Not sure yet"],
     { required: true },
   ),
-  text("payment_setup", "account_holder_name", "Account Holder Name"),
-  text("payment_setup", "bank_name", "Bank Name"),
-  text("payment_setup", "bank_account_number", "Account Number"),
-  text("payment_setup", "ifsc_code", "IFSC Code"),
-  text("payment_setup", "bank_branch_name", "Branch Name"),
-  text("payment_setup", "upi_id", "UPI ID"),
-  text("payment_setup", "payment_gateway_name", "Payment Gateway Name"),
-  text("payment_setup", "payment_link", "Payment Link", {
+  text("payment_setup", "account_holder_name", "Account Holder Name", {
+    required: true,
+    visibleWhenAny: [{ fieldId: "payment_methods", value: "Direct bank transfer" }],
+  }),
+  text("payment_setup", "bank_name", "Bank Name", {
+    required: true,
+    visibleWhenAny: [{ fieldId: "payment_methods", value: "Direct bank transfer" }],
+  }),
+  text("payment_setup", "bank_account_number", "Account Number", {
+    required: true,
+    visibleWhenAny: [{ fieldId: "payment_methods", value: "Direct bank transfer" }],
+  }),
+  text("payment_setup", "ifsc_code", "IFSC Code", {
+    required: true,
+    visibleWhenAny: [{ fieldId: "payment_methods", value: "Direct bank transfer" }],
+  }),
+  text("payment_setup", "bank_branch_name", "Branch Name", {
+    required: true,
+    visibleWhenAny: [{ fieldId: "payment_methods", value: "Direct bank transfer" }],
+  }),
+  text("payment_setup", "upi_id", "UPI ID", {
+    required: true,
+    placeholder: "Example: businessname@upi",
+    visibleWhenAny: [{ fieldId: "payment_methods", value: "UPI" }],
+  }),
+  text("payment_setup", "razorpay_payment_link", "Razorpay Payment Link", {
+    required: true,
     type: "url",
     validation: "url",
+    placeholder: "Paste Razorpay payment link",
+    visibleWhenAny: [{ fieldId: "payment_methods", value: "Razorpay" }],
   }),
-  textarea("payment_setup", "checkout_links", "Plan/checkout links"),
+  text("payment_setup", "cashfree_payment_link", "Cashfree Payment Link", {
+    required: true,
+    type: "url",
+    validation: "url",
+    placeholder: "Paste Cashfree payment link",
+    visibleWhenAny: [{ fieldId: "payment_methods", value: "Cashfree" }],
+  }),
+  text("payment_setup", "instamojo_payment_link", "Instamojo Payment Link", {
+    required: true,
+    type: "url",
+    validation: "url",
+    placeholder: "Paste Instamojo payment link",
+    visibleWhenAny: [{ fieldId: "payment_methods", value: "Instamojo" }],
+  }),
+  text("payment_setup", "stripe_payment_link", "Stripe Payment Link", {
+    required: true,
+    type: "url",
+    validation: "url",
+    placeholder: "Paste Stripe payment link",
+    visibleWhenAny: [{ fieldId: "payment_methods", value: "Stripe" }],
+  }),
+  text("payment_setup", "other_payment_method", "Please specify other payment method", {
+    required: true,
+    visibleWhenAny: [{ fieldId: "payment_methods", value: "Other" }],
+  }),
+  textarea("payment_setup", "other_payment_details", "Other Payment Link / Details", {
+    required: true,
+    placeholder: "Add payment link, instructions, or details",
+    visibleWhenAny: [{ fieldId: "payment_methods", value: "Other" }],
+  }),
   textarea(
     "payment_setup",
     "coupon_or_discount_rules",
-    "Any coupon/discount rules closer should know",
+    "Any coupon/discount rules closer should know?",
   ),
 
   field("amitsells_fit", "expected_amitsells_support", "What exactly do you want AmitSells to help you with?", {
@@ -891,25 +1108,6 @@ export const questions: FormQuestion[] = [
     "What result would make this collaboration successful for you?",
     { required: true },
   ),
-  field(
-    "amitsells_fit",
-    "sales_call_tone",
-    "What kind of tone should AmitSells maintain on sales calls?",
-    {
-      type: "multi-select",
-      longAnswer: false,
-      required: true,
-      options: [
-        "Direct",
-        "Premium",
-        "Consultative",
-        "Mentor-like",
-        "Emotional",
-        "Professional",
-        "Calm authority",
-      ],
-    },
-  ),
   radio(
     "amitsells_fit",
     "start_timeline",
@@ -921,6 +1119,18 @@ export const questions: FormQuestion[] = [
     "amitsells_fit",
     "additional_notes_for_amitsells",
     "Is there anything AmitSells must know before taking calls on your behalf?",
+  ),
+  field(
+    "amitsells_fit",
+    "information_accuracy_consent",
+    "I hereby confirm that all the information provided in this form is correct to the best of my knowledge, and I allow AmitSells to use this information to understand my business, improve the sales process, and help increase the revenue of my business.",
+    {
+      type: "checkbox",
+      longAnswer: false,
+      reviewLabel: "Information accuracy consent",
+      required: true,
+      requiredMessage: "Please confirm that the information provided is correct.",
+    },
   ),
 ];
 
@@ -942,7 +1152,12 @@ function matchesVisibilityRule(question: FormQuestion, answers?: AnswerLookup) {
   if (!answers) return false;
 
   return question.visibleWhenAny.some(
-    (rule) => answers[rule.fieldId] === rule.value,
+    (rule) => {
+      const answer = answers[rule.fieldId];
+      return Array.isArray(answer)
+        ? answer.includes(rule.value)
+        : answer === rule.value;
+    },
   );
 }
 

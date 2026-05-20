@@ -3,6 +3,10 @@ import {
   getVisibleQuestions,
   type PrimaryType,
 } from "@/lib/formSchema";
+import {
+  appendOnboardingRowToGoogleSheet,
+  type GoogleSheetsAppendResult,
+} from "@/lib/googleSheets";
 import type { OnboardingAnswers } from "@/lib/validation";
 
 export interface OnboardingSubmissionPayload {
@@ -33,9 +37,10 @@ export interface PreparedSubmission {
   flattenedAnswers: Record<string, unknown>;
   googleSheetRow: Record<string, unknown>;
   allAnswersJson: string;
+  googleSheets: GoogleSheetsAppendResult;
 }
 
-const googleSheetColumns = [
+export const googleSheetColumns = [
   "full_name",
   "phone",
   "email",
@@ -52,6 +57,12 @@ const googleSheetColumns = [
   "pan_number",
   "has_gst",
   "gstin",
+  "firm_pan_number",
+  "llpin",
+  "llp_pan_number",
+  "cin",
+  "company_pan_number",
+  "certificate_of_incorporation_link",
   "billing_address_line_1",
   "billing_address_line_2",
   "billing_city",
@@ -66,8 +77,9 @@ const googleSheetColumns = [
   "part_time_income_source",
   "has_website_or_landing_page",
   "website_or_landing_page_url",
-  "has_instagram_linkedin_profiles",
+  "has_instagram_profile",
   "instagram_profile",
+  "has_linkedin_profile",
   "linkedin_profile",
   "b2c_category",
   "other_b2c_category",
@@ -84,24 +96,35 @@ const googleSheetColumns = [
   "booked_calls_per_day",
   "show_up_ratio",
   "previous_sales_call_owner",
+  "appointment_setting_owner",
   "current_closing_rate",
   "prospect_dropoff_stage",
   "after_think_about_it_response",
   "exact_offer",
-  "client_transformation",
   "problem_solved",
-  "offer_inclusions",
+  "offer_messaging",
+  "offer_deliverables",
+  "delivery_mode",
+  "delivery_support",
   "why_choose_you",
   "bad_fit_client",
   "claims_never_to_make",
-  "ideal_buyer",
-  "buyer_struggles",
+  "ideal_buyer_age_range",
+  "ideal_buyer_demographic",
+  "ideal_buyer_psychographic",
+  "ideal_buyer_income_range",
+  "ideal_buyer_profession",
+  "ideal_buyer_locations",
+  "ideal_buyer_reason",
+  "buyer_biggest_struggles",
+  "promised_transformation",
+  "transformation_timeline",
   "buyer_problem_phrases",
-  "buyer_fears",
-  "buyer_desired_result",
-  "common_objections",
-  "buyer_questions",
-  "what_makes_them_say_yes",
+  "buyer_biggest_fears",
+  "buyer_secretly_wanted_results",
+  "common_buyer_objections",
+  "buyer_questions_before_buying",
+  "what_makes_buyer_say_yes",
   "has_testimonials",
   "testimonial_links",
   "has_proof_assets",
@@ -121,8 +144,8 @@ const googleSheetColumns = [
   "crm_name",
   "follow_up_process",
   "post_payment_onboarding",
-  "worked_with_closers_before",
-  "previous_closer_experience",
+  "worked_with_closers_or_agencies_before",
+  "previous_closer_or_agency_experience",
   "payment_methods",
   "should_share_payment_details_on_calls",
   "account_holder_name",
@@ -131,15 +154,18 @@ const googleSheetColumns = [
   "ifsc_code",
   "bank_branch_name",
   "upi_id",
-  "payment_gateway_name",
-  "payment_link",
-  "checkout_links",
+  "razorpay_payment_link",
+  "cashfree_payment_link",
+  "instamojo_payment_link",
+  "stripe_payment_link",
+  "other_payment_method",
+  "other_payment_details",
   "coupon_or_discount_rules",
   "expected_amitsells_support",
   "collaboration_success_result",
-  "sales_call_tone",
   "start_timeline",
   "additional_notes_for_amitsells",
+  "information_accuracy_consent",
 ] as const;
 
 export function flattenFormAnswers(payload: OnboardingSubmissionPayload) {
@@ -185,6 +211,10 @@ export async function submitOnboardingForm(
 ): Promise<PreparedSubmission> {
   const flattenedAnswers = flattenFormAnswers(payload);
   const googleSheetRow = prepareGoogleSheetRow(payload);
+  const googleSheets = await appendOnboardingRowToGoogleSheet(
+    googleSheetRow,
+    googleSheetColumns,
+  );
 
   const prepared = {
     timestamp: String(googleSheetRow.timestamp),
@@ -199,9 +229,15 @@ export async function submitOnboardingForm(
     flattenedAnswers,
     googleSheetRow,
     allAnswersJson: JSON.stringify(payload.rawJson),
+    googleSheets,
   };
 
-  console.info("[AmitSells mock onboarding submission]", prepared);
+  if (googleSheets.enabled) {
+    console.info("[AmitSells onboarding submission saved]", googleSheets);
+  } else {
+    console.warn("[AmitSells Google Sheets fallback]", googleSheets.message);
+    console.info("[AmitSells mock onboarding submission]", prepared);
+  }
 
   return prepared;
 }

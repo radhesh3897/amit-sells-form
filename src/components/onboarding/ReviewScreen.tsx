@@ -23,8 +23,9 @@ interface ReviewScreenProps {
   onSubmit: () => void;
 }
 
-function formatAnswer(value: unknown) {
+function formatAnswer(value: unknown, questionId?: string) {
   if (Array.isArray(value)) return value.length > 0 ? value.join(", ") : "Not answered";
+  if (questionId === "information_accuracy_consent" && value === true) return "Accepted";
   if (typeof value === "boolean") return value ? "Yes" : "Not answered";
   if (typeof value === "string") return value.trim() || "Not answered";
   return "Not answered";
@@ -118,8 +119,11 @@ export function ReviewScreen({
               </summary>
               <div className="mt-5 divide-y divide-[#E5E7EB]">
                 {sectionQuestions.map((question) => {
-                  const answer = formatAnswer(answers[question.id]);
+                  const answer = formatAnswer(answers[question.id], question.id);
                   const missing = question.required && !isAnswered(answers[question.id]);
+                  if (question.hideWhenEmpty && !isAnswered(answers[question.id])) {
+                    return null;
+                  }
 
                   return (
                     <div

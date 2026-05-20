@@ -35,10 +35,12 @@ function FieldChrome({
   question,
   error,
   children,
+  hideLabel,
 }: {
   question: FormQuestion;
   error?: string;
   children: React.ReactNode;
+  hideLabel?: boolean;
 }) {
   return (
     <motion.div
@@ -48,13 +50,15 @@ function FieldChrome({
       transition={{ duration: 0.2, ease: "easeOut" }}
       className="space-y-2"
     >
-      <label
-        htmlFor={question.id}
-        className="block text-sm font-semibold text-[#111827]"
-      >
-        {question.label}
-        {question.required ? <span className="text-[#B0985B]"> *</span> : null}
-      </label>
+      {hideLabel ? null : (
+        <label
+          htmlFor={question.id}
+          className="block text-sm font-semibold text-[#111827]"
+        >
+          {question.label}
+          {question.required ? <span className="text-[#B0985B]"> *</span> : null}
+        </label>
+      )}
       {question.description ? (
         <p className="text-sm leading-6 text-[#475569]">{question.description}</p>
       ) : null}
@@ -80,6 +84,7 @@ export function FormSection({
   const {
     register,
     control,
+    setValue,
     formState: { errors },
   } = form;
 
@@ -126,13 +131,30 @@ export function FormSection({
           </div>
 
           <motion.div layout className="space-y-6">
-            {questions.map((question) => {
+            {questions.map((question, index) => {
               const error = getErrorMessage(errors, question.id);
               const describedBy = error ? `${question.id}-error` : undefined;
+              const showGroupLabel =
+                question.groupLabel &&
+                questions[index - 1]?.groupLabel !== question.groupLabel;
+              const groupHeading = showGroupLabel ? (
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-[#111827]">
+                    {question.groupLabel}
+                    <span className="text-[#B0985B]"> *</span>
+                  </p>
+                </div>
+              ) : null;
+              const withGroupHeading = (node: React.ReactNode) => (
+                <div key={question.id} className="space-y-4">
+                  {groupHeading}
+                  {node}
+                </div>
+              );
 
               if (question.id === "primary_type") {
-                return (
-                  <FieldChrome key={question.id} question={question} error={error}>
+                return withGroupHeading(
+                  <FieldChrome question={question} error={error}>
                     <Controller
                       name={question.id}
                       control={control}
@@ -164,13 +186,13 @@ export function FormSection({
                         </div>
                       )}
                     />
-                  </FieldChrome>
+                  </FieldChrome>,
                 );
               }
 
               if (question.type === "textarea" || question.longAnswer || question.type === "file-link") {
-                return (
-                  <FieldChrome key={question.id} question={question} error={error}>
+                return withGroupHeading(
+                  <FieldChrome question={question} error={error}>
                     <Textarea
                       id={question.id}
                       placeholder={question.placeholder}
@@ -178,13 +200,13 @@ export function FormSection({
                       aria-describedby={describedBy}
                       {...register(question.id)}
                     />
-                  </FieldChrome>
+                  </FieldChrome>,
                 );
               }
 
               if (question.type === "select") {
-                return (
-                  <FieldChrome key={question.id} question={question} error={error}>
+                return withGroupHeading(
+                  <FieldChrome question={question} error={error}>
                     <select
                       id={question.id}
                       className="focus-ring h-12 w-full rounded-xl border border-[#E5E7EB] bg-white px-4 text-sm text-[#111827] shadow-sm hover:border-[#DACDA6]"
@@ -199,13 +221,13 @@ export function FormSection({
                         </option>
                       ))}
                     </select>
-                  </FieldChrome>
+                  </FieldChrome>,
                 );
               }
 
               if (question.type === "multi-select") {
-                return (
-                  <FieldChrome key={question.id} question={question} error={error}>
+                return withGroupHeading(
+                  <FieldChrome question={question} error={error}>
                     <Controller
                       name={question.id}
                       control={control}
@@ -229,15 +251,17 @@ export function FormSection({
                                 <input
                                   type="checkbox"
                                   checked={currentValue.includes(option)}
-                                  onChange={(event) => {
-                                    if (event.target.checked) {
-                                      field.onChange([...currentValue, option]);
-                                    } else {
-                                      field.onChange(
-                                        currentValue.filter((value) => value !== option),
-                                      );
-                                    }
-                                  }}
+                                onChange={(event) => {
+                                  const nextValue = event.target.checked
+                                    ? [...currentValue, option]
+                                    : currentValue.filter((value) => value !== option);
+
+                                  setValue(question.id, nextValue, {
+                                    shouldDirty: true,
+                                    shouldTouch: true,
+                                    shouldValidate: true,
+                                  });
+                                }}
                                   className="accent-[#083A25]"
                                 />
                                 {option}
@@ -247,13 +271,13 @@ export function FormSection({
                         );
                       }}
                     />
-                  </FieldChrome>
+                  </FieldChrome>,
                 );
               }
 
               if (question.type === "radio" && question.options) {
-                return (
-                  <FieldChrome key={question.id} question={question} error={error}>
+                return withGroupHeading(
+                  <FieldChrome question={question} error={error}>
                     <Controller
                       name={question.id}
                       control={control}
@@ -281,12 +305,42 @@ export function FormSection({
                         </div>
                       )}
                     />
-                  </FieldChrome>
+                  </FieldChrome>,
                 );
               }
 
-              return (
-                <FieldChrome key={question.id} question={question} error={error}>
+              if (question.type === "checkbox") {
+                return withGroupHeading(
+                  <FieldChrome question={question} error={error} hideLabel>
+                    <Controller
+                      name={question.id}
+                      control={control}
+                      render={({ field }) => (
+                        <label
+                          className={cn(
+                            "focus-within:ring-[#B0985B] flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm font-semibold leading-6 transition duration-200 ease-out active:scale-[0.995] focus-within:ring-2",
+                            field.value === true
+                              ? "border-[#B0985B] bg-[#F7F4EC] text-[#083A25]"
+                              : "border-[#E5E7EB] bg-white text-[#111827] hover:border-[#DACDA6]",
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={field.value === true}
+                            onChange={(event) => field.onChange(event.target.checked)}
+                            className="mt-1 accent-[#083A25]"
+                            aria-describedby={describedBy}
+                          />
+                          <span>{question.label}</span>
+                        </label>
+                      )}
+                    />
+                  </FieldChrome>,
+                );
+              }
+
+              return withGroupHeading(
+                <FieldChrome question={question} error={error}>
                   <Input
                     id={question.id}
                     type={
@@ -312,7 +366,7 @@ export function FormSection({
                     aria-describedby={describedBy}
                     {...register(question.id)}
                   />
-                </FieldChrome>
+                </FieldChrome>,
               );
             })}
           </motion.div>
